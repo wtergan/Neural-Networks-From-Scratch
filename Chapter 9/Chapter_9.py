@@ -1,61 +1,62 @@
-'''
-Backpropagation
+'''Backpropagation
 '''
 
 import numpy as np
 
-'''initalization of the inputs, weights, biases, and the dvalues, which represents
-    the gradients of the next layer, this will be an array of incremental values
+class Dense_Layer:
+    def __init__(self, num_inputs, num_neurons):
+        #initalize the weights, biases.
+        self.weights = 0.01 * np.random.randn(num_inputs, num_neurons)
+        self.biases = 0.01 * np.zeros((1, num_neurons))
 
-    remember, in order to do the matrix product of two matrices, 
-    inner dimensions must be the same.
-'''
-inputs = np.array([[1,2,3,2.5], [2,5,-1,2], [-1.5,2.7,3.3,-0.8]])
+    def forward(self, inputs):
+        #compute the matrix product of the inputs and the weights.
+        self.outputs = np.dot(inputs, self.weights) + self.biases
+        self.inputs = inputs
 
-weights = np.array([[0.2, 0.8, -0.5, 1], 
-                    [0.5, -0.91, 0.26, -0.5], 
-                    [-0.26,-0.27,0.17,0.87]]).T
+    #take in gradients from succeeding layer, compute gradients of parameters.
+    def backward(self, dvalues):
+        #gradient of inputs.
+        self.dinputs = np.dot(dvalues, self.weights.T)
+        #gradients of weights.
+        self.dweights = np.dot(self.inputs.T, dvalues)
+        #gradients of biases
+        self.dbiases = np.sum(dvalues, axis=0, keepdims=True)
 
-biases = np.array([[2,3,0.5]])
+class reLU:
+    def forward(self, inputs):
+        #compute the relu activation function.
+        self.outputs = np.maximum(0, inputs)
+        self.inputs = inputs
 
-dvalues = np.array([[1,1,1],[2,2,2],[3,3,3]])
+    def backward(self, dvalues):
+        #sets gradient to 0 where input values were <= 0 during forward pass.
+        self.dinputs = dvalues.copy()
+        self.dinputs[self.inputs <= 0] = 0
 
-print(f'inputs:\n{inputs}\n input shape: {inputs.shape}')
-print(f'weights:\n{weights}\n weight shape: {weights.shape}')
+class SoftMax:
+    #compute the softmax activation function to map inputs to probability distribution.
+    def forward(self, inputs):
+        #subtracting maxima of each row from all elements of that row. for normalization.
+        exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
+        self.probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)
 
-'''forward pass: dot (matrix) product, add biases, reLU activation.'''
-layer_outputs = np.dot(inputs, weights) + biases
-relu_outputs = np.maximum(0, layer_outputs)
+    def backward(self):
+        pass
 
-print(f'layer outputs before reLU activation function:\n{layer_outputs}')
-print(f'layer outputs after reLU activation function:\n{relu_outputs}')
+class CCEntropyLoss:
+    #compute the categorical cross entropy loss.
+    def forward(self, outputs, y):
+        #clip the data
+        outputs_clipped = np.clip(outputs, 1e-7, 1-1e-7)
+        #if true y is a one hot vector.
+        if len(y.shape)==1: conf = outputs_clipped[range(len(outputs_clipped)), y]
+        #if true y isnt a vector.
+        elif len(y.shape)==2: conf = np.sum(outputs_clipped * y, axis=1, keepdims=True)
+        #sample and average losses.
+        sample_losses = -np.log(conf)
+        average_loss = np.mean(sample_losses)
+        return average_loss
 
-
-'''derivative of relu wrt the inputs values from next layer passed to current layer
-    
-    -make a copy of the relu output layer so this isnt affected
-    -setting gradient to 0 for input values that were <=0
-'''
-drelu = relu_outputs.copy()
-drelu[layer_outputs <= 0 ] = 0
-print(f'derivative of the reLU activation function:\n{drelu}')
-
-'''derivative of reLU wrt inputs'''
-dinputs = np.dot(drelu, weights.T)
-
-'''derivative of reLU wrt weights'''
-dweights = np.dot(drelu, inputs)
-
-'''derivative of reLU wrt. biases'''
-dbiases = np.sum(drelu, axis=0, keepdims=True)
-
-print(f'dinputs: \n{dinputs}, shape: {dinputs.shape}')
-print(f'dweights: \n{dweights} shape: {dweights.shape},')
-print(f'dbiases: \n{dbiases}, shape: {dbiases.shape}')
-
-'''update the weights'''
-weights = weights.T + (-0.001 * dweights)
-biases += -0.001 * dbiases
-
-print(f'current weights after back prop:\n{weights}')
-print(f'current biases after back prop:\n{biases}')
+    def backward(self):
+        pass
